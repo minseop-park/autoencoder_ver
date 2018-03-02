@@ -202,6 +202,7 @@ def resnet_v2(inputs,
         # normalization or activation functions in the residual unit output. See
         # Appendix of [2].
         net = slim.batch_norm(net, activation_fn=tf.nn.relu, scope='postnorm')
+        logit = net
         # Convert end_points_collection into a dictionary of end_points.
         end_points = slim.utils.convert_collection_to_dict(
             end_points_collection)
@@ -218,7 +219,7 @@ def resnet_v2(inputs,
             net = tf.squeeze(net, [1, 2], name='SpatialSqueeze')
             end_points[sc.name + '/spatial_squeeze'] = net
           end_points['predictions'] = slim.softmax(net, scope='predictions')
-        return net, end_points
+        return net, logit
 resnet_v2.default_image_size = 224
 
 def resnet_v2_block(scope, base_depth, num_units, stride):

@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
 
-from utils import fc, deconv, unpool
+from utils import fc, deconv, unpool, layer_bn
 import resnet_v2
 slim = tf.contrib.slim
 
@@ -17,27 +17,55 @@ class ResAutoEncoderTrainNet():
         with tf.variable_scope(self.name):
             x_reshape = tf.tile(x_ph, [1,1,1,3])
             with slim.arg_scope(resnet_v2.resnet_arg_scope()):
-                logits, _ = resnet_v2.resnet_v2_101(x_reshape, 1001, is_training=True)
+                _, logits = resnet_v2.resnet_v2_101(x_reshape, 1001, is_training=True)
         return logits
 
     def decoder(self, hid_feat, reuse=False, trainable=True):
         with tf.variable_scope(self.name):
             L = fc('dfc1', 8*8*256, hid_feat)
             L = tf.reshape(L, [-1,8,8,256])
-            L = unpool(L)
-            L = deconv('dc1', [3,3,256,256], L)
-            L = unpool(L)
-            L = deconv('dc2', [3,3,256,128], L)
-            L = unpool(L)
-            L = deconv('dc3', [3,3,128,64], L)
-            L = unpool(L)
-            L = deconv('dc4', [3,3,64,64], L)
-            L = unpool(L)
-            L = deconv('dc5', [3,3,64,64], L, activation=None)
-            L = unpool(L)
-            L = deconv('dc6', [3,3,64,1], L, activation=None)
+            L = tf.layers.conv2d_transpose(L, 256, 5, strides=2, padding='SAME')
+            L = tf.layers.conv2d_transpose(L, 128, 5, strides=2, padding='SAME')
+            L = tf.layers.conv2d_transpose(L, 64, 5, strides=2, padding='SAME')
+            L = tf.layers.conv2d_transpose(L, 32, 5, strides=2, padding='SAME')
+            L = tf.layers.conv2d_transpose(L, 16, 5, strides=2, padding='SAME')
+            L = tf.layers.conv2d_transpose(L, 1, 5, strides=2, padding='SAME')
+            L = tf.nn.sigmoid(L)
             L = tf.squeeze(L)
         return L
+
+    def decoder2(self, hid_feat, reuse=False, trainable=True):
+        with tf.variable_scope(self.name):
+#            L = fc('dfc1', 8*8*256, hid_feat)
+#            L = tf.reshape(L, [-1,8,8,256])
+#            L = unpool(hid_feat)
+            isTr = tf.constant(True)
+            L = tf.image.resize_bilinear(hid_feat, size=[16,16])
+            L = tf.layers.conv2d_transpose(L, 1024, 3, padding='SAME')
+            L = tf.layers.conv2d_transpose(L, 512, 3, padding='SAME')
+            L = layer_bn('b1', L, isTr)
+            L = unpool(L)
+            L = tf.layers.conv2d_transpose(L, 512, 3, padding='SAME')
+            L = tf.layers.conv2d_transpose(L, 256, 3, padding='SAME')
+            L = layer_bn('b2', L, isTr)
+            L = unpool(L)
+            L = tf.layers.conv2d_transpose(L, 256, 3, padding='SAME')
+            L = tf.layers.conv2d_transpose(L, 128, 3, padding='SAME')
+            L = layer_bn('b3', L, isTr)
+            L = unpool(L)
+            L = tf.layers.conv2d_transpose(L, 128, 3, padding='SAME')
+            L = tf.layers.conv2d_transpose(L, 64, 3, padding='SAME')
+            L = layer_bn('b4', L, isTr)
+            L = unpool(L)
+            L = tf.layers.conv2d_transpose(L, 64, 3, padding='SAME')
+            L = tf.layers.conv2d_transpose(L, 32, 3, padding='SAME')
+            L = layer_bn('b5', L, isTr)
+            L = unpool(L)
+            L = tf.layers.conv2d_transpose(L, 32, 3, padding='SAME')
+            L = tf.layers.conv2d_transpose(L, 1, 3, padding='SAME')
+            L = tf.nn.sigmoid(L)
+            L = tf.squeeze(L)
+            return L
 
     def saver_init(self):
         model_var_lists = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES,
@@ -86,9 +114,43 @@ class ResAutoEncoderTestNet(ResAutoEncoderTrainNet):
         else:
             self.model_loc = loc
 
+
     def encoder(self, x_ph, reuse=False, trainable=False):
         with tf.variable_scope(self.name):
             x_reshape = tf.tile(x_ph, [1,1,1,3])
             with slim.arg_scope(resnet_v2.resnet_arg_scope()):
-                logits, _ = resnet_v2.resnet_v2_101(x_reshape, 1001, is_training=False)
+                _, logits = resnet_v2.resnet_v2_101(x_reshape, 1001, is_training=False)
         return logits
+
+    def decoder2(self, hid_feat, reuse=False, trainable=True):
+        with tf.variable_scope(self.name):
+#            L = fc('dfc1', 8*8*256, hid_feat)
+#            L = tf.reshape(L, [-1,8,8,256])
+#            L = unpool(hid_feat)
+            isTr = tf.constant(False)
+            L = tf.image.resize_bilinear(hid_feat, size=[16,16])
+            L = tf.layers.conv2d_transpose(L, 1024, 3, padding='SAME')
+            L = tf.layers.conv2d_transpose(L, 512, 3, padding='SAME')
+            L = layer_bn('b1', L, isTr)
+            L = unpool(L)
+            L = tf.layers.conv2d_transpose(L, 512, 3, padding='SAME')
+            L = tf.layers.conv2d_transpose(L, 256, 3, padding='SAME')
+            L = layer_bn('b2', L, isTr)
+            L = unpool(L)
+            L = tf.layers.conv2d_transpose(L, 256, 3, padding='SAME')
+            L = tf.layers.conv2d_transpose(L, 128, 3, padding='SAME')
+            L = layer_bn('b3', L, isTr)
+            L = unpool(L)
+            L = tf.layers.conv2d_transpose(L, 128, 3, padding='SAME')
+            L = tf.layers.conv2d_transpose(L, 64, 3, padding='SAME')
+            L = layer_bn('b4', L, isTr)
+            L = unpool(L)
+            L = tf.layers.conv2d_transpose(L, 64, 3, padding='SAME')
+            L = tf.layers.conv2d_transpose(L, 32, 3, padding='SAME')
+            L = layer_bn('b5', L, isTr)
+            L = unpool(L)
+            L = tf.layers.conv2d_transpose(L, 32, 3, padding='SAME')
+            L = tf.layers.conv2d_transpose(L, 1, 3, padding='SAME')
+            L = tf.nn.sigmoid(L)
+            L = tf.squeeze(L)
+            return L

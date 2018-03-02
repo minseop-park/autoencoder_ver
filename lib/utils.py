@@ -68,7 +68,7 @@ def conv(name, shape, prev, reuse=False, trainable=True, stride=1):
             b = tf.get_variable('b', initializer=init, trainable=trainable)
     return _conv2d(prev, w, stride) + b
 
-def deconv(name, shape, prev, reuse=False, trainable=True, activation=True, stride=1):
+def deconv(name, shape, prev, reuse=False, trainable=True, activation=True, stride=2):
     dev_n = shape[1]*shape[1]*shape[3]
     with tf.variable_scope(name):
         if reuse:
@@ -103,6 +103,17 @@ def get_wb(name, shape, r=False, t=True):
             init = tf.constant(.0, shape=[shape[-1]])
             b = tf.get_variable('b', initializer=init, trainable=t)
     return w, b
+
+def layer_bn(name, x, isTr, r=False, t=True):
+    with tf.variable_scope(name):
+        out =  tf.contrib.layers.batch_norm(x,
+                decay=.99,
+                scale=True,
+                is_training=isTr,
+                reuse=r,
+                scope=name,
+                trainable=t)
+    return out
 
 def batch_norm(name, x, isTr, r=False, t=True):
     out_channel = x.get_shape().as_list()[3]

@@ -6,7 +6,7 @@ import _init_paths
 from network import ResAutoEncoderTrainNet
 from network import ResAutoEncoderTestNet
 from utils import Avg, apply_window
-from dataset import get_train_pair, get_test_data
+from dataset import get_train_pair
 
 model_name = 'autoencoder'
 save_dir = '/home/mike/models/' + model_name + '/'
@@ -36,18 +36,13 @@ loss = -tf.reduce_mean(bloss * mask) * 10000
 opt = tf.train.AdamOptimizer(1e-4)
 train_op = opt.minimize(loss)
 update_op = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
-mav = [v for v in tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES) if 'moving_mean' in v.name]
-mav = mav[0]
-#with tf.control_dependencies(update_op):
-#    train_op = opt.minimize(loss)
-
 
 sess = tf.Session()
 sess.run(tf.global_variables_initializer())
 
 #model.pretrain_load(sess)
 saver = tf.train.Saver()
-saver.restore(sess, save_dir + 'a.ckpt')
+#saver.restore(sess, save_dir + 'a.ckpt')
 
 avg = Avg(['loss'])
 for i in range(1, 1+max_iter):
@@ -56,12 +51,12 @@ for i in range(1, 1+max_iter):
     rnd_bern = rnd_bern < 2
     fd = {img_x: x, img_y: y, b_ph: rnd_bern}
     _, _, l = sess.run([train_op, update_op, loss], fd)
+#    p = sess.run(recon, fd)
+#    print (p.shape)
     avg.add(l, 0)
-
     if i % 30 == 0:
         avg.show(i)
-    if i % 10 == 0:
-        fd = {img_x: x, img_y: y}
+    if i % 100 == 0:
         rc, rx, ry = sess.run([recon, img_x, img_y], fd)
         for k in range(rc.shape[0]):
             np.save('sample_imgs/a_'+str(k)+'.npy', rc[k])
@@ -69,4 +64,4 @@ for i in range(1, 1+max_iter):
             np.save('sample_imgs/y_'+str(k)+'.npy', ry[k])
         avg.description()
         print (np.mean(rc), np.mean(ry), np.mean(rx))
-        #saver.save(sess, save_dir + 'a.ckpt')
+        saver.save(sess, save_dir + 'a.ckpt')

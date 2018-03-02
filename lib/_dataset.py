@@ -27,8 +27,8 @@ def get_test_data(batch_size):
     input_imgs = []
     target_imgs = []
     for x, y in zip(full_input_list[:batch_size], full_target_list[:batch_size]):
-        input_imgs.append(apply_window(np.load(file_dir + x + '.npy')))
-        target_imgs.append(apply_window(np.load(file_dir + y + '.npy')))
+        input_imgs.append(np.load(file_dir + x + '.npy'))
+        target_imgs.append(np.load(file_dir + y + '.npy'))
     return np.array(input_imgs), np.array(target_imgs)
 
 def get_train_pair(batch_size):
@@ -39,14 +39,12 @@ def get_train_pair(batch_size):
     np.random.shuffle(d_list)
     for dname in d_list[:batch_size]:
         yimg = np.load(file_dir + dname)
-        yimg = cv2.blur(yimg, (3,3))
+        yimg = cv2.blur(yimg, (5,5))
         yimg[yimg < 20] = 0
-        yimg[yimg >= 20] = 1
-
         ys.append(yimg)
         img_name = root_dir + 'severance_data/imgs/' + dname
         img = np.load(img_name)
-        img = apply_window(img)
+        #img = apply_window(img)
         xs.append(img)
     return np.array(xs), np.array(ys)
 
