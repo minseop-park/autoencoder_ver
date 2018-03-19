@@ -1,9 +1,60 @@
 import tensorflow as tf
 import numpy as np
 
-from utils import fc, deconv, unpool, layer_bn
+from utils import fc, deconv, unpool, layer_bn, conv, pool
 import resnet_v2
 slim = tf.contrib.slim
+
+class VGGNet():
+    def __init__(self, name):
+        self.name = name
+
+    def encoder(self, x_ph, isTr_ph):
+        with tf.variable_scope(self.name):
+            l = conv('c1', [5,5,1,64], x_ph)
+            l = conv('c2', [5,5,64,64], l)
+            l = layer_bn('b1', l, isTr_ph)
+            l = pool(l)
+            l = conv('c3', [5,5,64,128], l)
+            l = conv('c4', [5,5,128,128], l)
+            l = layer_bn('b2', l, isTr_ph)
+            l = pool(l)
+            l = conv('c5', [5,5,128,256], l)
+            l = conv('c6', [5,5,256,256], l)
+            l = conv('c7', [5,5,256,256], l)
+            l = layer_bn('b3', l, isTr_ph)
+            l = pool(l)
+            l = conv('c8', [5,5,256,512], l)
+            l = conv('c9', [5,5,512,512], l)
+            l = conv('c10', [5,5,512,512], l)
+            l = layer_bn('b4', l, isTr_ph)
+            l = pool(l)
+            return l
+
+    def decoder(self, hid_feat, isTr):
+        with tf.variable_scope(self.name):
+            L = tf.layers.conv2d_transpose(hid_feat, 512, 3, padding='SAME')
+            L = tf.layers.conv2d_transpose(L, 512, 3, padding='SAME')
+            L = layer_bn('b5', L, isTr)
+            L = unpool(L)
+            L = tf.layers.conv2d_transpose(L, 512, 3, padding='SAME')
+            L = tf.layers.conv2d_transpose(L, 256, 3, padding='SAME')
+            L = layer_bn('b6', L, isTr)
+            L = unpool(L)
+            L = tf.layers.conv2d_transpose(L, 256, 3, padding='SAME')
+            L = tf.layers.conv2d_transpose(L, 128, 3, padding='SAME')
+            L = layer_bn('b7', L, isTr)
+            L = unpool(L)
+            L = tf.layers.conv2d_transpose(L, 128, 3, padding='SAME')
+            L = tf.layers.conv2d_transpose(L, 64, 3, padding='SAME')
+            L = layer_bn('b8', L, isTr)
+            L = unpool(L)
+            L = tf.layers.conv2d_transpose(L, 32, 3, padding='SAME')
+            L = tf.layers.conv2d_transpose(L, 1, 3, padding='SAME')
+            L = tf.nn.sigmoid(L)
+            L = tf.squeeze(L)
+            return L
+
 
 class ResAutoEncoderTrainNet():
     def __init__(self, name, loc=None):

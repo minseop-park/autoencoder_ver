@@ -60,7 +60,7 @@ for i in range(1, 1+max_iter):
 
     if i % 30 == 0:
         avg.show(i)
-    if i % 10 == 0:
+    if i % 100 == 0:
         fd = {img_x: x, img_y: y}
         rc, rx, ry = sess.run([recon, img_x, img_y], fd)
         for k in range(rc.shape[0]):
@@ -69,4 +69,4 @@ for i in range(1, 1+max_iter):
             np.save('sample_imgs/y_'+str(k)+'.npy', ry[k])
         avg.description()
         print (np.mean(rc), np.mean(ry), np.mean(rx))
-        #saver.save(sess, save_dir + 'a.ckpt')
+        saver.save(sess, save_dir + 'a.ckpt')

@@ -1,1 +1,5 @@
 *.npy
+*.jpg
+
+/sampled_images/
+/garbages

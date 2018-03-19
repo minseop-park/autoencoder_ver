@@ -269,3 +269,27 @@ def apply_window(img, window_level=1040, window_width=200):
     b = 255.0 / (0.5 - window_level / window_width)
     img = img * a + b
     return img
+
+def avg_grad(all_tower_grads):
+    average_grads = []
+    for grad_var in zip(*all_tower_grads):
+        # grad_var_0 = ((g0_gpu0,v0_gpu0), (g0_gpu1, v0_gpu1), ...,(g0_gpuN, v0_gpuN))
+        grads = []
+        for g, _ in grad_var:
+            # only gradients
+            exp_g = tf.expand_dims(g, 0)
+            grads.append(exp_g)
+
+        grad = tf.concat(axis=0, values=grads)
+        grad = tf.reduce_mean(grad, 0)
+        v = grad_var[0][1]
+        out_grad_var = (grad, v)
+        # out_grad_var_0 = (g0, v0)
+        average_grads.append(out_grad_var)
+    return average_grads
+
+def get_mask(img_y, zeros_sampling):
+    mask = tf.greater(img_y, 10)
+    mask = tf.logical_or(mask, zeros_sampling)
+    mask = tf.cast(mask, tf.float32)
+    return mask
